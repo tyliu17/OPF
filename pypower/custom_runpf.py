@@ -1,5 +1,7 @@
 from pypower.api import runpf as prunpf
 from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 
 # 目标函数：最小化发电成本
@@ -39,6 +41,30 @@ def print_flow_information(branch, P_branch_flow):
     for i, flow in enumerate(P_branch_flow):
         print(f"Line {i+1} Flow: {flow:.4f} MW (RateA: {branch[i, 5]} MW)")
 
+# 绘制电网拓扑图
+def draw_topology(bus, branch):
+    print(bus)
+    print(branch)
+    # Create graph
+    G = nx.Graph()
+
+    # Add buses as nodes
+    for bus in bus:
+        G.add_node(bus[0], voltage=bus[2])
+
+    # Add branches as edges
+    for branch in branch:
+        G.add_edge(branch[0], branch[1], resistance=branch[2], reactance=branch[3])
+
+    # Draw the graph
+    pos = nx.spring_layout(G)  # Layout for visualizing the graph
+    nx.draw(G, pos, with_labels=True, node_color="lightblue", font_weight="bold", node_size=700)
+    labels = nx.get_edge_attributes(G, 'reactance')
+    nx.draw_networkx_edge_labels(G, pos, edge_labels=labels)
+
+    plt.title("Bus and Branch Topology")
+    plt.show()
+
 def runpf(mpc, ppopt, fname):
     # 提取 baseMVA 和 bus 数据
     version = mpc['version']
@@ -47,7 +73,7 @@ def runpf(mpc, ppopt, fname):
     gen = mpc['gen']
     branch = mpc['branch']
     gencost = mpc['gencost']
-    
+    draw_topology(bus, branch)
     """
     # 假设的发电成本系数 (a, b, c)
     gencost = np.array([
@@ -65,7 +91,8 @@ def runpf(mpc, ppopt, fname):
     # 初始发电机出力
     Pg_initial = np.array([100, 100, 100])
 
-     # 定义约束：负荷平衡约束，发电机出力上下限，线路潮流约束
+    
+    # 定义约束：负荷平衡约束，发电机出力上下限，线路潮流约束
     cons = [{'type': 'eq', 'fun': balance_constraint, 'args': (P_load,)},  # 负荷平衡约束
             {'type': 'ineq', 'fun': gen_min_max_constraints, 'args': (Pg_min, Pg_max)},  # 发电机最小/最大出力约束
             {'type': 'ineq', 'fun': branch_flow_constraints, 'args': (bus, branch, baseMVA)}]  # 线路潮流约束
@@ -73,7 +100,9 @@ def runpf(mpc, ppopt, fname):
     # 优化
     result = minimize(cost_function, Pg_initial, args=(gencost,), constraints=cons, 
                       bounds=[(Pg_min[i], Pg_max[i]) for i in range(len(Pg_initial))])
+    
     print("result : " , result)
+    
     """
     print("result\n",result)
 
@@ -108,9 +137,13 @@ def runpf(mpc, ppopt, fname):
         # 输出线路潮流约束情况
         line_constraints = (P_branch_flow >= branch[:, 5]) | (-P_branch_flow >= branch[:, 5])
         print("Line Flow Constraints Reached:", line_constraints)
-
+        
+        # 绘制电网拓扑图
+        
     else:
         print("Optimization failed:", result.message)
+
+    
     print("===================================")
     return prunpf(mpc, ppopt, fname=fname)
     
