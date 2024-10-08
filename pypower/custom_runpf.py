@@ -46,7 +46,7 @@ def draw_topology(bus, branch):
     print(bus)
     print(branch)
     # Create graph
-    G = nx.Graph()
+    G = nx.DiGraph()
 
     # Add buses as nodes
     for bus in bus:
@@ -90,6 +90,7 @@ def runpf(mpc, ppopt, fname):
 
     # 初始发电机出力
     Pg_initial = np.array([100, 100, 100])
+    #Pg_initial = np.array([150, 100, 50])
 
     
     # 定义约束：负荷平衡约束，发电机出力上下限，线路潮流约束
@@ -101,7 +102,7 @@ def runpf(mpc, ppopt, fname):
     result = minimize(cost_function, Pg_initial, args=(gencost,), constraints=cons, 
                       bounds=[(Pg_min[i], Pg_max[i]) for i in range(len(Pg_initial))])
     
-    print("result : " , result)
+    print("result : \n" , result)
     
     """
     print("result\n",result)
