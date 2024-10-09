@@ -3,7 +3,7 @@ from pypower.api import case9, ppoption, runopf, runpf, loadcase
 from pypower.idx_bus import PD, QD
 from pypower.idx_gen import PG
 from pypower.idx_brch import RATE_A, PF
-import custom_runpf as crunpf
+import custom_functions.runpf as crunpf
 
 # 載入案例
 mpc = case9()
