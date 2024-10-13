@@ -36,7 +36,7 @@ from pypower.savecase import savecase
 from pypower.int2ext import int2ext
 
 from pypower.idx_bus import PD, QD, VM, VA, GS, BUS_TYPE, PV, PQ, REF
-from pypower.idx_brch import PF, PT, QF, QT
+from pypower.idx_brch import F_BUS, T_BUS, PF, PT, QF, QT
 from pypower.idx_gen import PG, QG, VG, QMAX, QMIN, GEN_BUS, GEN_STATUS
 
 
@@ -304,6 +304,13 @@ def runpf(casedata=None, ppopt=None, fname='', solvedcase=''):
 
     if len(results["order"]["branch"]["status"]["off"]) > 0:
         results["branch"][ix_(results["order"]["branch"]["status"]["off"], [PF, QF, PT, QT])] = 0
+
+    # 修改branch的值
+    branch = results["branch"]
+    for i in range(branch.shape[0]):
+        branch[i, F_BUS], branch[i, T_BUS], branch[i, PF], branch[i, QF], branch[i, PT], branch[i, QT] = \
+            1, 2, 0.1, 0.2, 0.3, 0.4
+    results["branch"] = branch
 
     if fname:
         fd = None

@@ -3,10 +3,10 @@ from pypower.api import case9, ppoption, runopf, runpf, loadcase
 from pypower.idx_bus import PD, QD
 from pypower.idx_gen import PG
 from pypower.idx_brch import RATE_A, PF
-import custom_functions.runpf as crunpf
+from custom_functions import runpf as crunpf
 
 # 載入案例
-mpc = case9()
+ppc = case9()
 
 # 設置 PYPOWER 選項
 ppopt = ppoption(
@@ -22,24 +22,24 @@ ppopt = ppoption(
 
 n = 1  # 數據集數量
 
-N = len(mpc['bus'])  # 匯流排數量
-L = len(mpc['branch'])  # 線路數量
+N = len(ppc['bus'])  # 匯流排數量
+L = len(ppc['branch'])  # 線路數量
 
 # 非零負載的索引
-index = np.where(mpc['bus'][:, PD] != 0)[0]
+index = np.where(ppc['bus'][:, PD] != 0)[0]
 n_load = len(index)
 
 load_file0_real = np.zeros((N, n))
 load_file0_reac = np.zeros((N, n))
 
 # 設置線路限制
-mpc['branch'][:, RATE_A] *= 1.1  # 增加 10% 的流量限制
-p_max = mpc['branch'][:, RATE_A]
+ppc['branch'][:, RATE_A] *= 1.1  # 增加 10% 的流量限制
+p_max = ppc['branch'][:, RATE_A]
 
 # 調整負載
-mpc['bus'][:, PD] *= 0.95  # 減少 5% 的負載
+ppc['bus'][:, PD] *= 0.95  # 減少 5% 的負載
 
-mpc2 = mpc.copy()  # 儲存參考系統
+ppc2 = ppc.copy()  # 儲存參考系統
 
 # 生成隨機負載並運行最優潮流
 result = []
@@ -48,21 +48,21 @@ for k in range(n):
     r1 = np.random.uniform(-0.05, 0.05, N)  # 負載 q
     
     # 有功功率
-    mpc['bus'][:, PD] = mpc2['bus'][:, PD] * (1 + r0)
+    ppc['bus'][:, PD] = ppc2['bus'][:, PD] * (1 + r0)
     # 無功功率
-    mpc['bus'][:, QD] = mpc2['bus'][:, QD] * (1 + r1 * 0.2)
+    ppc['bus'][:, QD] = ppc2['bus'][:, QD] * (1 + r1 * 0.2)
     
-    load_file0_real[:, k] = mpc['bus'][:, PD]
-    load_file0_reac[:, k] = mpc['bus'][:, QD]
+    load_file0_real[:, k] = ppc['bus'][:, PD]
+    load_file0_reac[:, k] = ppc['bus'][:, QD]
     
     if np.min(load_file0_real[:, k]) < -300:
         result.append({'success': 0})
         print('負載過小')
     else:
         try:
-            # res = runopf(mpc, ppopt, fname='result.txt')
-            # res = runpf(mpc, ppopt, fname='result.txt')[0]
-            cres = crunpf.runpf(mpc, ppopt, fname='result.txt')[0]
+            # res = runopf(ppc, ppopt, fname='result.txt')
+            # res = runpf(ppc, ppopt, fname='result.txt')[0]
+            cres = crunpf.runpf(ppc, ppopt, fname='result.txt')[0]
 
             result.append(cres)
             if cres['success'] == 0:
@@ -71,7 +71,7 @@ for k in range(n):
             print(f"OPF 執行錯誤: {str(e)}")
             result.append({'success': 0})
     
-    mpc = mpc2.copy()  # 在修改後重置 mpc
+    ppc = ppc2.copy()  # 在修改後重置 ppc
 
 # 計算有效數據集數量
 index = [i for i, res in enumerate(result) if res['success']]
@@ -104,11 +104,11 @@ else:
         line_index_lo[:, i] = (p_max + f[:, i] < 1e-3) & (f[:, i] < 0)
 
     # 匯流排約束
-    n_gen = len(mpc2['gen'])
-    n_bus = len(mpc2['bus'])
-    gen_idx0 = mpc2['gen'][:, 0].astype(int)
-    gen_idx = [np.where(mpc['bus'][:, 0] == gen_bus)[0][0] for gen_bus in gen_idx0]
-    gen_lim = mpc2['gen'][:, [8, 9]]
+    n_gen = len(ppc2['gen'])
+    n_bus = len(ppc2['bus'])
+    gen_idx0 = ppc2['gen'][:, 0].astype(int)
+    gen_idx = [np.where(ppc['bus'][:, 0] == gen_bus)[0][0] for gen_bus in gen_idx0]
+    gen_lim = ppc2['gen'][:, [8, 9]]
 
     # 從結果中獲取數據
     gen_data0 = np.zeros((n_gen, idx_count))
