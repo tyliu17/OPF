@@ -64,7 +64,7 @@ def serialize_ppc_res(ppc, res):
     }
 
 # 創建儲存 JSON 文件的目錄
-output_dir = '../dataset/case9_data'
+output_dir = '../model/dataset/case9_data'
 os.makedirs(output_dir, exist_ok=True)
 
 # 生成隨機負載並運行最優潮流
