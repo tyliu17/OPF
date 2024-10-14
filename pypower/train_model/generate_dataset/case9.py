@@ -5,6 +5,7 @@ from pypower.idx_gen import PG
 from pypower.idx_brch import RATE_A, PF
 import json
 import os
+import re
 
 # 載入案例
 ppc = case9()
@@ -21,7 +22,7 @@ ppopt = ppoption(
         # 4 - Gauss Seidel,
 )
 
-n = 100  # 數據集數量（根據需要調整）
+n = 4800  # 數據集數量（根據需要調整）
 
 N = len(ppc['bus'])  # 匯流排數量
 L = len(ppc['branch'])  # 線路數量
@@ -67,8 +68,18 @@ def serialize_ppc_res(ppc, res):
 output_dir = '../model/dataset/case9_data'
 os.makedirs(output_dir, exist_ok=True)
 
+# 取數字
+def extract_number(filename):
+    match = re.search(r'\d+', filename)
+    return int(match.group()) if match else None
+
+files = [f for f in os.listdir(output_dir) if os.path.isfile(os.path.join(output_dir, f))]
+max_number = 0
+if files:
+    max_number = max(extract_number(f) for f in files if extract_number(f) is not None)
+
 # 生成隨機負載並運行最優潮流
-for k in range(n):
+for k in range(max_number, max_number + n):
     r0 = np.random.uniform(-0.05, 0.05, N)  # 負載 p
     r1 = np.random.uniform(-0.05, 0.05, N)  # 負載 q
 
@@ -77,10 +88,12 @@ for k in range(n):
     # 無功功率
     ppc['bus'][:, QD] = ppc2['bus'][:, QD] * (1 + r1 * 0.2)
 
-    load_file0_real[:, k] = ppc['bus'][:, PD]
-    load_file0_reac[:, k] = ppc['bus'][:, QD]
+    # 儲存負載
+    load_number = k - max_number
+    load_file0_real[:, load_number] = ppc['bus'][:, PD]
+    load_file0_reac[:, load_number] = ppc['bus'][:, QD]
 
-    if np.min(load_file0_real[:, k]) < -300:
+    if np.min(load_file0_real[:, load_number]) < -300:
         result_entry = {'success': 0, 'message': '負載過小'}
         serialized_data = serialize_ppc_res(ppc, result_entry)
         filename = f'power_flow_case_{k+1}.json'
